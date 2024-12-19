@@ -5,7 +5,7 @@ const { getAllMembers, updateMember, upload, getMemberByUserId, deleteMember, ge
 const router = express.Router();
 
 // Protect all routes
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 
 router.get('/', getAllMembers);

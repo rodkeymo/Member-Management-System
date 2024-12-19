@@ -1,91 +1,104 @@
-import React, {useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    MagnifyingGlassIcon,
-    ChevronUpDownIcon,
-  } from "@heroicons/react/24/outline";
-  import { PencilIcon, UserPlusIcon } from "@heroicons/react/24/solid";
-  import {
-    Card,
-    CardHeader,
-    Input,
-    Typography,
-    Button,
-    CardBody,
-    Chip,
-    CardFooter,
-    Tabs,
-    TabsHeader,
-    Tab,
-    Avatar,
-    IconButton,
-    Tooltip,
-  } from "@material-tailwind/react";
-import { StatisticsCard } from "@/widgets/cards";
-import { StatisticsChart } from "@/widgets/charts";
+  MagnifyingGlassIcon,
+  ChevronUpDownIcon,
+  UserPlusIcon,
+} from "@heroicons/react/24/outline";
 import {
-  statisticsCardsData,
-  projectsTableData,
-} from "@/data";
-import { CheckCircleIcon, ClockIcon } from "@heroicons/react/24/solid";
+  Card,
+  CardHeader,
+  Input,
+  Typography,
+  Button,
+  CardBody,
+  Avatar,
+  CardFooter,
+} from "@material-tailwind/react";
 import { Link } from "react-router-dom";
 
-export function Members() {
-    const [members, setMembers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [totalPages, setTotalPages] = useState(1);
 
-    const TABLE_HEAD = [ "Member", "Email", "Mobile", "Bio" ];
-  
-    useEffect(() => {
-      fetchMembers();
-    }, [searchTerm, page]);
-  
+
+
+export function Members() {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  const TABLE_HEAD = ["Member", "Email", "Mobile", "Bio"];
+
+  // Fetch members when page, pageSize, or searchTerm changes
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); 
+    return () => clearTimeout(timeoutId); // Cleanup timeout
+  }, [searchTerm]);
+  useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const url = `http://localhost:5000/api/members?page=${page}&pageSize=${pageSize}&searchTerm=${encodeURIComponent(searchTerm)}`;
-        const response = await fetch(url,{
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-          });
+        setLoading(true);
+        setError(null); // Reset the error state before fetching
+
+        const url = `http://localhost:5000/api/members?page=${page}&pageSize=${pageSize}&searchTerm=${encodeURIComponent(debouncedSearchTerm)}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
         if (!response.ok) {
-          throw new Error('Network response was not ok.');
+          // Log the response for debugging
+          console.error("Response Status:", response.status);
+          console.error("Response StatusText:", response.statusText);
+          const errorResponse = await response.json();
+          console.error("Error Response:", errorResponse);
+
+          throw new Error(`Network response was not ok. Status: ${response.status}`);
         }
+
         const data = await response.json();
         setMembers(data.members);
         setTotalPages(Math.ceil(data.totalCount / pageSize));
         setLoading(false);
       } catch (error) {
-        setError('Failed to fetch members');
+        console.error("Fetch Members Error:", error);
+        setError("Failed to fetch members");
         setLoading(false);
       }
     };
-  
-    const handleSearchChange = (event) => {
-      setSearchTerm(event.target.value);
-    };
-  
-    const handlePageChange = (direction) => {
-      if (direction === 'prev') {
-        setPage(prevPage => prevPage > 1 ? prevPage - 1 : 1);
-      } else {
-        setPage(prevPage => prevPage < totalPages ? prevPage + 1 : totalPages);
-      }
-    };
-  
-    const handlePageSizeChange = (size) => {
-      setPageSize(size);
-      setPage(1);
-    };
-  
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>Error: {error}</div>;
-  
+
+
+    fetchMembers();
+  }, [page, pageSize, debouncedSearchTerm]); 
+
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value); // Only update the search term
+  };
+
+  const handlePageChange = (direction) => {
+    if (direction === "prev") {
+      setPage((prevPage) => (prevPage > 1 ? prevPage - 1 : 1));
+    } else {
+      setPage((prevPage) => (prevPage < totalPages ? prevPage + 1 : totalPages));
+    }
+  };
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setPage(1); // Reset to the first page
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
   return (
     <Card className="h-full w-full">
       <CardHeader floated={false} shadow={false} className="rounded-none">
@@ -99,7 +112,7 @@ export function Members() {
             </Typography>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-            <Link to='/dashboard/add-user'>
+            <Link to="/dashboard/add-user">
               <Button className="flex items-center gap-3" size="sm">
                 <UserPlusIcon strokeWidth={2} className="h-4 w-4" /> Add member
               </Button>
@@ -143,65 +156,44 @@ export function Members() {
           <tbody>
             {members.map(({ username, title, email, mobile, profilePicture, bio }, index) => {
               const isLast = index === members.length - 1;
-              const classes = isLast
-                ? "p-4"
-                : "p-4 border-b border-blue-gray-50";
+              const classes = isLast ? "p-4" : "p-4 border-b border-blue-gray-50";
 
               return (
                 <tr key={username}>
                   <td className={classes}>
                     <div className="flex items-center gap-3">
-                      <Avatar src={profilePicture || "https://cdn-icons-png.flaticon.com/512/847/847969.png"} alt={username} size="sm" />
+                      <Avatar
+                        src={
+                          profilePicture ||
+                          "https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                        }
+                        alt={username}
+                        size="sm"
+                      />
                       <div className="flex flex-col">
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="font-normal"
-                        >
+                        <Typography variant="small" color="blue-gray" className="font-normal">
                           {username}
                         </Typography>
-                        <Typography
-                          variant="small"
-                          color="blue-gray"
-                          className="font-normal opacity-70"
-                        >
+                        <Typography variant="small" color="blue-gray" className="font-normal opacity-70">
                           {email}
                         </Typography>
                       </div>
                     </div>
                   </td>
                   <td className={classes}>
-                    <div className="flex flex-col">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal"
-                      >
-                        {title}
-                      </Typography>
-                    </div>
+                    <Typography variant="small" color="blue-gray" className="font-normal">
+                      {title}
+                    </Typography>
                   </td>
                   <td className={classes}>
-                    <div className="flex flex-col">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal"
-                      >
-                        {mobile}
-                      </Typography>
-                    </div>
+                    <Typography variant="small" color="blue-gray" className="font-normal">
+                      {mobile}
+                    </Typography>
                   </td>
                   <td className={classes}>
-                    <div className="flex flex-col">
-                      <Typography
-                        variant="small"
-                        color="blue-gray"
-                        className="font-normal"
-                      >
-                        {bio}
-                      </Typography>
-                    </div>
+                    <Typography variant="small" color="blue-gray" className="font-normal">
+                      {bio}
+                    </Typography>
                   </td>
                 </tr>
               );
@@ -217,7 +209,7 @@ export function Members() {
           <Button
             variant="outlined"
             size="sm"
-            onClick={() => handlePageChange('prev')}
+            onClick={() => handlePageChange("prev")}
             disabled={page <= 1}
           >
             Previous
@@ -225,7 +217,7 @@ export function Members() {
           <Button
             variant="outlined"
             size="sm"
-            onClick={() => handlePageChange('next')}
+            onClick={() => handlePageChange("next")}
             disabled={page >= totalPages}
           >
             Next

@@ -37,12 +37,12 @@ const getAllMembers = async (req, res) => {
 
     if (searchTerm) {
       whereOptions = {
-        $or: [
-          { name: { [Op.like]: `%${searchTerm}%` } },
+        [Op.or]: [
+          { username: { [Op.like]: `%${searchTerm}%` } },
           { email: { [Op.like]: `%${searchTerm}%` } },
-          { description: { [Op.like]: `%${searchTerm}%` } },
+          { bio: { [Op.like]: `%${searchTerm}%` } },
           { title: { [Op.like]: `%${searchTerm}%` } },
-          { mobileNumber: { [Op.like]: `%${searchTerm}%` } }
+          { mobile: { [Op.like]: `%${searchTerm}%` } }
         ]
       };
     }
